@@ -74,7 +74,8 @@ def main():
         val = input("Generate Graph(G) or Read(R)\n")
         if((val == "G") or (val == "g")):
             # using a set seed
-            G = nx.gnp_random_graph(size, 0.4, seed=42, directed=True)
+            # minimize the number of edges as graph grows
+            G = nx.gnp_random_graph(size, 0.1, seed=42, directed=True)
             # weighted graph / networkx cc takes along time when weighted
             # nx.set_edge_attributes(G, {e: {'weight': random.randint(1, 3)} for e in G.edges})
             nx.set_edge_attributes(G, {e: {'weight': 1} for e in G.edges})
