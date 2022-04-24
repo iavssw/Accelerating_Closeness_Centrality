@@ -256,14 +256,11 @@ void FW_tile_top(unsigned short adj_mat0[ADJ_MAT_SIZE * ADJ_MAT_SIZE], unsigned 
 
         // Phase 2
         for (i = 0; i < LOOP_SIZE; i++) {
-            //#pragma HLS UNROLL factor=8
             if (i != k) {
-                // printf("raw _ cords: %d, %d\n", i, k);
                 FW_driver(0, 0, i, k, i, k, k, k, adj_mat0, adj_mat1, adj_mat2, adj_mat3);
             }
         }
         for (j = 0; j < LOOP_SIZE; j++) {
-            //#pragma HLS UNROLL factor=8
             if (j != k) {
                 FW_driver(0, 0, k, j, k, k, k, j, adj_mat0, adj_mat1, adj_mat2, adj_mat3);
             }
@@ -275,7 +272,6 @@ void FW_tile_top(unsigned short adj_mat0[ADJ_MAT_SIZE * ADJ_MAT_SIZE], unsigned 
         // Phase 3
         for (int i = 0; i < LOOP_SIZE; i++) {
             for (int j = 0; j < LOOP_SIZE; j++) {
-                //#pragma HLS UNROLL factor=8
                 if (i != k || j != k) {
                     FW_driver(0, 0, i, j, i, k, k, j, adj_mat0, adj_mat1, adj_mat2, adj_mat3);
                 }
