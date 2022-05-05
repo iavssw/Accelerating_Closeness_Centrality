@@ -2,9 +2,9 @@
 #include <math.h>
 #include <stdlib.h>
 
-#define inf 9999 // no edge between vertices (since we don't want to import infinity)
+#define inf 9999999 // no edge between vertices (since we don't want to import infinity)
 
-__global__ void gpufun(int n, int k, float* x, int* qx) 
+__global__ void floydwarshall(int n, int k, float* x, int* qx) 
 {
 
     int ix = blockIdx.x * blockDim.x + threadIdx.x;
@@ -14,16 +14,42 @@ __global__ void gpufun(int n, int k, float* x, int* qx)
     if (x[ix] > tmp)  // find lesser of x[ix] and tmp
     {
         x[ix] = tmp;
-        qx[ix] = k;
+        //qx[ix] = k;
     }
 }
+
+// closeness centrality kernel:
+//  this is just a matrix-vector multiplication with unit vector
+//  plus a reciprocal on the resulting vector
+// @n: number of vertices
+// @x: shortest distance matrix:
+//      x[i * n + j] is the shortest distance from vertex i to vertex j
+// @cc: output array of closeness centrality for each vertex
+__global__ void closeness_centrality(int n, float* x, float* cc)
+{
+    // each thread works on one vertex
+    const int tid = blockDim.x * blockIdx.x + threadIdx.x;  // assert(tid < n)
+
+    float sum = 0.0f;
+    if (tid < n) {
+        for (int i = 0; i < n; i++) {
+            if (tid != i) {
+                float dis = x[tid * n + i];
+                sum += 1 / dis; // use harmonic sum in case the graph is not strongly connected
+            }
+        }
+        cc[tid] = sum;
+    }
+}
+
 
 int main(int argc, char **argv) 
 {
 
-    cudaEvent_t start, stop;
+    cudaEvent_t start, stop, fw_finished;
 
     float *host_A, *host_D, *dev_x, *A, *D, tolerance = 0.001, dt_ms = 0, sum = 0;
+    float *host_cc, *dev_cc;
 
     int *host_Q, *dev_qx, *Q, i = 0, j = 0, bk = 0, k = 0, n = atoi(argv[1]), gputhreads = 512;
     char runcpu = argv[2][0];
@@ -34,7 +60,8 @@ int main(int argc, char **argv)
     printf("\n");
 
     cudaMalloc(&dev_x, n * n * sizeof(float));
-    cudaMalloc(&dev_qx, n * n * sizeof(float));
+    cudaMalloc(&dev_cc, n * sizeof(float));
+    //cudaMalloc(&dev_qx, n * n * sizeof(float));
 
     // Arrays for the CPU
     A = (float *) malloc(n * n * sizeof(float)); // original matrix A
@@ -45,6 +72,7 @@ int main(int argc, char **argv)
     host_A = (float *) malloc(n * n * sizeof(float));
     host_D = (float *) malloc(n * n * sizeof(float));
     host_Q = (int *) malloc(n * n * sizeof(int));
+    host_cc = (float*) malloc(n * sizeof(float));
 
     // generate random graph
 
@@ -73,13 +101,14 @@ int main(int argc, char **argv)
     }
 
     cudaEventCreate(&start);
+    cudaEventCreate(&fw_finished);
     cudaEventCreate(&stop);
 
     // First copy, CPU -> GPU
 
     cudaEventRecord(start, 0);
     cudaMemcpy(dev_x, host_A, n * n * sizeof(float), cudaMemcpyHostToDevice);
-    cudaMemcpy(dev_qx, host_Q, n * n * sizeof(int), cudaMemcpyHostToDevice);
+    //cudaMemcpy(dev_qx, host_Q, n * n * sizeof(int), cudaMemcpyHostToDevice);
     cudaEventRecord(stop, 0);
     cudaEventSynchronize(start); 
     cudaEventSynchronize(stop);
@@ -105,14 +134,24 @@ int main(int argc, char **argv)
     // start algo on GPU
     for (k = 0; k < n; ++k) 
     {
-        gpufun <<<bk, gputhreads>>>(n, k, dev_x, dev_qx);
+        floydwarshall<<<bk, gputhreads>>>(n, k, dev_x, dev_qx);
     }
+    cudaEventRecord(fw_finished, 0);
+
+    closeness_centrality<<<n / 256 + 1, 256>>>(n, dev_x, dev_cc);
+
     cudaDeviceSynchronize(); // wait until all threads are done
+
     cudaEventRecord(stop, 0);
     cudaEventSynchronize(start); 
+    cudaEventSynchronize(fw_finished);
     cudaEventSynchronize(stop);
     cudaEventElapsedTime(&dt_ms, start, stop);
+    float fwtime, cctime;
+    cudaEventElapsedTime(&fwtime, start, fw_finished);
+    cudaEventElapsedTime(&cctime, fw_finished, stop);
     printf("Computation time on GPU: %lf ms\n", dt_ms);
+    printf("FW time: %lf ms; CC time: %lf ms\n", fwtime, cctime);
 
     sum+=dt_ms;
     t2s = dt_ms;
@@ -120,7 +159,7 @@ int main(int argc, char **argv)
     // Second copy, GPU -> CPU
     cudaEventRecord(start, 0);
     cudaMemcpy(host_D, dev_x, n * n * sizeof(float), cudaMemcpyDeviceToHost);
-    cudaMemcpy(host_Q, dev_qx, n * n * sizeof(int), cudaMemcpyDeviceToHost);
+    //cudaMemcpy(host_Q, dev_qx, n * n * sizeof(int), cudaMemcpyDeviceToHost);
     cudaEventRecord(stop, 0);
     cudaEventSynchronize(start); 
     cudaEventSynchronize(stop);
