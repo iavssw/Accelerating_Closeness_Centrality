@@ -10,7 +10,7 @@
 
 
 /// This is top function.
-void FW_core(unsigned short v0[1000][1000], unsigned short v1[1000][1000], unsigned short v2[1000][1000]) {  // L2
+void FW_core_1000(unsigned short v0[1000][1000], unsigned short v1[1000][1000], unsigned short v2[1000][1000]) {  // L2
 
 #pragma HLS array_partition variable=v0 cyclic factor=4 dim=1
 #pragma HLS array_partition variable=v0 cyclic factor=4 dim=2
@@ -80,13 +80,13 @@ void FW_core(unsigned short v0[1000][1000], unsigned short v1[1000][1000], unsig
     }
 }
 
-void top (short address[20][6], unsigned short adj_mat[ADJ_MAT_SIZE][ADJ_MAT_SIZE]) {
+void top_1000(short address[20][6], unsigned short adj_mat[ADJ_MAT_SIZE][ADJ_MAT_SIZE]) {
 
     unsigned short C0[BLOCK_SIZE][BLOCK_SIZE];
     unsigned short A0[BLOCK_SIZE][BLOCK_SIZE];
     unsigned short B0[BLOCK_SIZE][BLOCK_SIZE];
 
-    FW_core(C0, A0, B0);
+    FW_core_1000(C0, A0, B0);
 
 }
 

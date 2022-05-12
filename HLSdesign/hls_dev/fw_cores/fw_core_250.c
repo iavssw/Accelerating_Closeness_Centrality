@@ -9,7 +9,7 @@
 #define USHRT_MAX 65535
 
 /// This is top function.
-void FW_core(unsigned short v0[250][250], unsigned short v1[250][250], unsigned short v2[250][250]) {  // L2
+void FW_core_250(unsigned short v0[250][250], unsigned short v1[250][250], unsigned short v2[250][250]) {  // L2
 
 #pragma HLS array_partition variable = v0 cyclic factor = 10 dim = 2
 
@@ -77,10 +77,10 @@ void FW_core(unsigned short v0[250][250], unsigned short v1[250][250], unsigned 
     }
 }
 
-void top(short address[20][6], unsigned short adj_mat[ADJ_MAT_SIZE][ADJ_MAT_SIZE]) {
+void top_250(short address[20][6], unsigned short adj_mat[ADJ_MAT_SIZE][ADJ_MAT_SIZE]) {
     unsigned short C0[BLOCK_SIZE][BLOCK_SIZE];
     unsigned short A0[BLOCK_SIZE][BLOCK_SIZE];
     unsigned short B0[BLOCK_SIZE][BLOCK_SIZE];
 
-    FW_core(C0, A0, B0);
+    FW_core_250(C0, A0, B0);
 }

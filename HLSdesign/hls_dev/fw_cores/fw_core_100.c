@@ -75,7 +75,7 @@ void FW_core_100(unsigned short v0[100][100], unsigned short v1[100][100], unsig
     }
 }
 
-void test100 (short address[20][6], unsigned short adj_mat[ADJ_MAT_SIZE][ADJ_MAT_SIZE]) {
+void top_100(short address[20][6], unsigned short adj_mat[ADJ_MAT_SIZE][ADJ_MAT_SIZE]) {
 
     unsigned short C0[BLOCK_SIZE][BLOCK_SIZE];
     unsigned short A0[BLOCK_SIZE][BLOCK_SIZE];
